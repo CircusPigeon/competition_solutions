@@ -1,0 +1,226 @@
+\label{subsec:correctness}
+\subsection{Correctness}
+We may assume that $\guess$ is within a factor of $2$ of $\OPT$ by paying an additional $O(\log(n))$ factor in our runtime to guess $\guess$. 
+
+Our analysis will be broken into cases over sub-intervals of $I$. First, we introduce the following notation. For a sub-interval $U \subseteq [0, n]$, we define $X_U := \{x_i \in \windowsX : i \in U\}$ to be the set of $X$ windows over $U$. A \emph{trivial} window $x_i$ is one where $|\niceMatch(x_i)| = 0$ (i.e., in the optimal matching, it gets deleted entirely). 
+Similarly, we define $S_U := \{x_i \in X_U : |\niceMatch(x_i)| \neq 0\}$ to be the set of nontrivial $X$ windows over $U$, and $T_U := X_U \setminus S_U$ to be the trivial $X$ windows over $U$. 
+We recall that $\actual = d$ for trivial window $x_i$. We begin by classifying our intervals as trivial and nontrivial. Intuitively,  trivial intervals are dominated by trivial windows.
+
+\begin{definition}
+    For a sub-interval $U \subseteq [0, n]$, we say that $U$ is \emph{trivial} if $\sum_{x_i \in S_U}\proxy_i \leq \frac{1}{100}\sum_{x_i \in T_U}\proxy_i$, and \emph{nontrivial} otherwise.
+\end{definition}
+
+For the nontrivial intervals, either the dense phase or the sparse phase give us a good approximation upperbound. This is captured by the following characterization of our sub-intervals:
+
+\begin{definition}
+    For a nontrivial sub-interval $U \subseteq [0, n]$, we say that $U$ is \emph{dense} if $\sum_{x_i \in S_U}\actual \geq (1-\eps)\sum_{x_i \in S_U}\proxy_i$, and \emph{sparse} otherwise.
+\end{definition}
+
+Our claim is that under this definition, dense intervals achieve the desired approximation for $\cost(\niceMatch)$. In this case, we need not consider what happens for subsequent sub-intervals. Otherwise, either the interval is trivial, or we may inductively suppose that we have sampled a sparse window $\anchor$, whose match $\niceMatch(\anchor)$ is restricted only to $Y$ windows with edit distance cheaper than $\proxy_a$. This allows us to maintain a set of potential matches for each anchor conditioned on it being sparse. Once our sub-intervals contain a single window, we simply compute these edit distances directly as desired. 
+
+\begin{lemma}
+    \label{lem:dense-approx}
+    If a nontrivial sub-interval $U \subseteq [0, n]$ is dense, then our dense phase upper-bounds give us a $(3+O(\eps))$-approximation of $\cost(\niceMatch)$ over $U$. Indeed, we show:
+    $$\sum_{x_i \in S_U}\estimate(x_i, \niceMatch(x_i)) \leq (3+O(\eps))\sum_{x_i \in S_U}\actual.$$
+    It is fairly easy to conclude that $\costE(\niceMatch|_{S_U}) \leq (3+O(\eps)) \cost(\niceMatch|_{S_U})$ from there.
+    %TODO: we have to show this later.
+\end{lemma}
+
+\begin{proof}
+    Suppose $U \subseteq [0, n]$ is dense. Then we have
+    
+    \begin{align}
+    \sum_{x_i \in S_U}\estimate(x_i, \niceMatch(x_i)) &= \sum_{x_i \in S_U}\left(\proxy_i + \ED(\centers_{x_i}, \niceMatch(x_i))\right) \nonumber\\ 
+    &\leq \sum_{x_i \in S_U}\left(2\proxy_i + \actual\right) \tag{triangle inequality}\\
+    &\leq 2\sum_{x_i \in S_U}\proxy_i + \sum_{x_i \in S_U}\actual \nonumber\\
+    &\leq \frac{2}{1-\eps}\sum_{x_i \in S_U}\actual + \sum_{x_i \in S_U}\actual \tag{$U$ dense}\\
+    &\leq 2(1+2\eps)\sum_{x_i \in S_U}\actual + \sum_{x_i \in S_U}\actual \tag{$\eps \leq 1/2$}\\
+    &\leq (3+4\eps)\sum_{x_i \in S_U}\actual. \nonumber
+    \end{align}
+\end{proof}
+
+% \begin{lemma}
+%     If a sub-interval $U \subseteq [0, n]$ is sparse and trivial, then 
+%     $$\costE(\niceMatch|_{X_U}) \leq 1.1 \cost(\niceMatch|_{T_U}).$$
+% \end{lemma}
+\begin{lemma}
+    If a sub-interval $U \subseteq [0, n]$ is sparse and trivial, then 
+    $$\costE(\niceMatch|_{X_U}) \leq 1.1 \cost(\niceMatch|_{X_U}).$$
+\end{lemma}
+
+% \begin{proof}
+%     First, observe that $\costE(\niceMatch|_{X_U}) = \costE(\niceMatch|_{S_U}) + \cost(\niceMatch|_{T_U})$. It suffices to show that $\costE(\niceMatch|_{S_U}) \leq 0.1 \cost(\niceMatch|_{T_U})$. Indeed, we have
+%     \begin{align*}
+%         \sum_{x_i \in S_U}\estimate(x_i, \niceMatch(x_i)) &\leq \sum_{x_i \in S_U}2\proxy_i + \actual \\
+%         &= 2\sum_{x_i \in S_U}\proxy_i + \sum_{x_i \in S_U}\actual \\
+%         &\leq (3-\eps)\sum_{x_i \in S_U}\proxy_i \tag{$U$ sparse}\\
+%         &<\frac{1}{30}\sum_{x_i \in T_U}\proxy_i \tag{$U$ trivial}\\
+%         &\leq \frac{1}{30}\sum_{x_i \in T_U}3\windowLength \tag{$\max_Ll = 3\windowLength$}\\
+%         &\leq \frac{1}{10}\sum_{x_i \in T_U}\actual. \tag{$\actual = \windowLength$ for trivial $x_i$}
+%     \end{align*}
+
+% \end{proof}
+\begin{proof}
+    Let $G(X_U) = \sum_{x_i \in X_U} |s(\niceMatch(x_i)) - e(\niceMatch(x_{i-d}))|$ denote the gap cost over $X_U$. By definition, we can express the estimated cost over $X_U$ as:
+    $$\costE(\niceMatch|_{X_U}) = \sum_{x_i \in S_U}\estimate(x_i, \niceMatch(x_i)) + \sum_{x_i \in T_U}\actual + G(X_U).$$
+    
+    First, we show that $\sum_{x_i \in S_U}\estimate(x_i, \niceMatch(x_i)) \leq 0.1 \sum_{x_i \in T_U}\actual$. Indeed, we have
+    \begin{align*}
+        \sum_{x_i \in S_U}\estimate(x_i, \niceMatch(x_i)) &\leq \sum_{x_i \in S_U}2\proxy_i + \actual \\
+        &= 2\sum_{x_i \in S_U}\proxy_i + \sum_{x_i \in S_U}\actual \\
+        &\leq (3-\eps)\sum_{x_i \in S_U}\proxy_i \tag{$U$ sparse}\\
+        &<\frac{1}{30}\sum_{x_i \in T_U}\proxy_i \tag{$U$ trivial}\\
+        &\leq \frac{1}{30}\sum_{x_i \in T_U}3\windowLength \tag{$\max_Ll = 3\windowLength$}\\
+        &\leq \frac{1}{10}\sum_{x_i \in T_U}\actual. \tag{$\actual = \windowLength$ for trivial $x_i$}
+    \end{align*}
+    
+    Substituting this bound back into our total estimated cost equation yields:
+    \begin{align*}
+        \costE(\niceMatch|_{X_U}) &\leq 0.1 \sum_{x_i \in T_U}\actual + \sum_{x_i \in T_U}\actual + G(X_U) \\
+        &= 1.1 \sum_{x_i \in T_U}\actual + G(X_U) \\
+        &\leq 1.1 \left( \sum_{x_i \in T_U}\actual + G(X_U) \right) \\
+        &\leq 1.1 \left( \sum_{x_i \in X_U}\actual + G(X_U) \right) \\
+        &= 1.1 \cost(\niceMatch|_{X_U}).
+    \end{align*}
+\end{proof}
+
+
+\begin{lemma}
+    \label{lem:anchors}
+    If a sub-interval $U \subseteq [0, n]$ is sparse and nontrivial, then with high probability we will sample an anchor which is sparse and nontrivial.
+\end{lemma}
+
+\begin{proof}
+    Suppose $U \subseteq [0, n]$ is sparse. First, we have
+    
+    \begin{align}
+    \sum_{x_i \in S_U : x_i \tx{ sparse}}\proxy_i &= \sum_{x_i \in S_U}\proxy_i - \sum_{x_i \in S_U : x_i \tx{ dense}}\proxy_i \tag{every $x_i$ dense or sparse}\\
+    &\geq \sum_{x_i \in S_U}\proxy_i - \sum_{x_i \in S_U}\actual \tag{definition of dense}\\
+    &> \sum_{x_i \in S_U}\proxy_i - (1-\eps)\sum_{x_i \in S_U}\proxy_i \tag{$U$ sparse}\\
+    &= \eps \sum_{x_i \in S_U}\proxy_i. \nonumber
+\end{align}
+
+Since we sample $x_i$ as an anchor with probability proportional to $\proxy_i$, we have
+
+\begin{align*}
+\Pr(\tx{anchor sparse and nontrivial}) &= \frac{\sum_{x_i \in S_U : x_i \tx{ sparse}}\proxy_i}{\sum_{x_i \in X_U}\proxy_i} \\
+&= \frac{\eps \sum_{x_i \in S_U}\proxy_i}{\sum_{x_i \in S_U}\proxy_i + \sum_{x_i \in T_U}\proxy_i} \\
+&> \frac{\eps \sum_{x_i \in S_U}\proxy_i}{\sum_{x_i \in S_U}\proxy_i + 100\sum_{x_i \in S_U}\proxy_i} \tag{$U$ nontrivial}\\
+&= \eps/101.
+\end{align*}
+
+Hence after $|\anchors_U| = O(\log(n)/\eps)$ independent samples, the claim is proved.
+\end{proof}
+
+Let us also consider the following definition which will be crucial for our analysis. 
+We say that a nontrivial sub-interval $U \subseteq [0, n]$ in our recursion is \emph{hierarchically sparse} if all of its parent intervals $V$ are sparse and nontrivial. 
+It is easy to see that the algorithm will give us a decomposition of $[0, n]$ into hierarchically sparse sub-intervals which are either dense, or consist of a single sparse window. 
+For every such sparse window $x_i$, we compute the edit distance for the box $(x_i, \niceMatch(x_i))$ directly, which is shown in the following lemma. 
+
+\begin{lemma}
+    \label{lem:sparse-correctness}
+    For any hierarchically sparse sub-interval $U \subseteq [0, n]$ at the end of the recursion which consists of a single window $x_i$ that is sparse, we set $\estimate(x_i, \mu(x_i)) = \ED(x_i, \mu(x_i))$ with high probability.
+\end{lemma}
+
+\begin{proof}
+    Let $V_1, \ldots, V_L$ be the sequence of parent sub-intervals in the recursion, so $V_1 = I$ and $V_L$ is the parent interval of $U$. Since $U$ is hierarchically sparse, by definition we have that $V_\ell$ is sparse for every $\ell \in [L]$. 
+    The proof is by induction on the level $\ell \in [L]$ that $\hat{\potentialMatches}_{V_\ell}$ contains $\niceMatch(x_i)$ for every $x_i \in X_{V_\ell}$ with high probability. This will imply that the sparse window $x_i$ in $X_U$ has its match $\niceMatch(x_i)$ contained in the final set of potential matches $\hat{\potentialMatches}_{V_L}$, so we update $\estimate(x_i, \niceMatch(x_i))$ as claimed.
+    
+    \textbf{Base case}: For $\ell = 1$, we sample a sparse anchor $\anchor$ with high probability by Lemma~\ref{lem:anchors} since $V_1 = I$ is sparse by our assumption. Then $\niceMatch(\anchor) \in \potentialMatches_I$ since we store every window in $\windowsY$ such that $\ED(\anchor, y_{j, l}) \leq \proxy_a$. 
+    This implies that $\hat{\potentialMatches}_I$ contains $\niceMatch(x_i)$ for every $x_i \in \windowsX$ by the $3$-skewness of $\niceMatch$ (Lemma~\ref{lem:structured-matching}).
+    
+    \textbf{Inductive step}: For $\ell \in [L-1]$, suppose that $\hat{\potentialMatches}_{V_\ell}$ contains $\niceMatch(x_i)$ for every $x_i \in X_{V_\ell}$. Since $V_{\ell+1}$ is sparse, we sample a sparse anchor $\anchor$ with high probability by Lemma~\ref{lem:anchors}. Thus $\niceMatch(\anchor) \in \hat{\potentialMatches}_{V_\ell}$,  $\ED(\anchor, \niceMatch(\anchor)) \leq \proxy_a$, and $\niceMatch(\anchor) \in \guessBand(\anchor)$, so $\potentialMatches_{V_{\ell+1}}$ will contain $\niceMatch(\anchor)$. This implies that $\hat{\potentialMatches}_{V_{\ell+1}}$ contains $\niceMatch(x_i)$ for every $x_i \in V_{\ell+1}$ by the $3$-skewness of $\niceMatch$.
+\end{proof}
+
+Now, let us prove that we get a $2$-approximation over the trivial $X$ windows, which we denote $\trivial := \windowsX \setminus \nontrivial$.
+
+\begin{lemma}
+    \label{lem:trivial-match}
+    Consider any $x_i \in \windowsX$ such that $|\optMatch(x_i)| \notin [\windowLength/3, 3\windowLength]$. Then $\cost(\niceMatch|_{\{x_i\}}) \leq 2\OPT_{\{x_i\}}$.
+\end{lemma}
+
+\begin{proof}
+    Note that $\optMatch$ costs $\ED(x_i, \optMatch(x_i))$ over this region. On the other hand, matching to the empty string will give us trivial cost $\windowLength + |\optMatch(x_i)|$ by taking the horizontal and vertical edges around this box. We wish to show that
+
+    $$\frac{\cost(\niceMatch|_{\{x_i\}})}{\OPT_{\{x_i\}}} = \frac{\windowLength + |\optMatch(x_i)|}{\ED(x_i, \optMatch(x_i))} \leq 2.$$
+
+    Suppose that $|\optMatch(x_i)| < \windowLength / 3$. We have by symmetric difference that $\ED(x_i, \optMatch(x_i)) \geq \windowLength - |\optMatch(x_i)|$. Now, we can bound
+
+    $$\frac{\windowLength + |\optMatch(x_i)|}{\ED(x_i, \optMatch(x_i))} \leq \frac{\windowLength + |\optMatch(x_i)|}{\windowLength - |\optMatch(x_i)|} \leq 2.$$
+
+    The last inequality uses the fact that $|\optMatch(x_i)| \leq \windowLength/3$.
+
+    Suppose that $|\optMatch| > 3\windowLength$. Observe that by symmetric difference, we have $\ED(x_i, \optMatch(x_i)) \geq |\optMatch(x_i)| - \windowLength$. Thus $|\optMatch(x_i)| \leq \windowLength + \ED(x_i, \optMatch(x_i))$. Now, we can bound
+
+    $$\frac{\windowLength + |\optMatch(x_i)|}{\ED(x_i, \optMatch(x_i))} \leq \frac{2\windowLength + \ED(x_i, \optMatch(x_i))}{\ED(x_i, \optMatch(x_i))} \leq 2.$$
+
+    The last inequality follows from the fact that $\ED(x_i, \optMatch(x_i)) \geq |\optMatch(x_i)| - \windowLength \geq 2\windowLength$.
+\end{proof}
+
+Our proof of correctness over the maximal violations of $3$-skew which are matched trivially will be analogous to the argument in Lemma~\ref{lem:trivial-match} (as well as GRS).
+
+\begin{lemma}
+    \label{lem:3-skew}
+    Let $x_l$, $x_r \in \windowsX$ be a maximal pair of windows for which $\optMatch$ violates $3$-skew. Consider $R = \{x_i \in \windowsX : i \in [l:r]\}$. Then $\cost(\niceMatch|_R) \leq 2\OPT_R$.
+\end{lemma}
+
+\begin{proof}
+    Assume $l < r$, and write
+    \[
+        h \defeq r - l,
+        \qquad
+        v \defeq \st(\optMatch(x_r)) - \st(\optMatch(x_l)),
+    \]
+    for the horizontal and vertical extents that $\optMatch$ traverses across the
+    block, measured start-to-start from $\optMatch(x_l)$ to $\optMatch(x_r)$.
+    Since $x_l$, $x_r$ violate $3$-skew
+    \[
+        v = \st(\optMatch(x_r)) - \st(\optMatch(x_l)) > 3(r - l) = 3 h.
+    \]
+
+    On one hand, $\optMatch|_R$ induces a monotone edit path through the table
+    coordinates $(l, \st(\optMatch(x_l)))$ and $(r, \st(\optMatch(x_r)))$. Any monotone
+    path between these coordinates has cost at least the difference of its vertical and
+    horizontal extents, so
+    \[
+        \OPT_R \geq |v - h| = v - h.
+    \]
+
+    On the other hand, setting $\niceMatch(x_i)$ to the empty string for all $x_i \in R$ lets us route
+    around the block by taking the horizontal and vertical edges from
+    $(l, \st(\optMatch(x_l)))$ to $(r, \st(\optMatch(x_r)))$, exactly as in
+    Lemma~\ref{lem:trivial-match}, which costs at most $h + v$. It remains to bound the
+    ratio:
+    \[
+        \frac{h + v}{v - h} \leq 2
+        \quad\Longleftrightarrow\quad
+        h + v \leq 2(v - h)
+        \quad\Longleftrightarrow\quad
+        v \geq 3 h,
+    \]
+    which holds by the $3$-skew violation. Therefore setting every $x_i \in R$ to empty string
+    costs at most
+    \[
+        h + v \leq 2(v - h) \leq 2\,\OPT_R,
+    \]
+    as claimed.
+\end{proof}
+
+Taking Lemmas~\ref{lem:trivial-match} and~\ref{lem:3-skew} together, we get that $\cost(\niceMatch|_{\trivial}) \leq 2\OPT_{\trivial}$. Also note that $\costE(\niceMatch|_{\trivial}) = \cost(\niceMatch|_{\trivial})$ since the matches over $\trivial$ are to the empty string.
+
+Finally, let us show that the output of our DP is a $(3+O(\eps))$ approximation for $\OPT$, completing the proof of correctness for our main theorem.
+
+\begin{lemma}
+    \label{lem:total-approx}
+    $\OPT \leq \costE(\niceMatch) \leq (3+O(\eps))\OPT$.
+\end{lemma}
+
+\begin{proof}
+    The lower bound is trivial since $\estimate$ only gives upper bounds for $\actual$. For the upper bound, consider the decomposition of $I$ into dense sub-intervals, trivial sparse sub-intervals, and hierarchically sparse singleton intervals. 
+    
+    For the nontrivial matches, the dense sub-intervals admit a $(3+O(\eps))$-approximation upper bound by Lemma~\ref{lem:dense-approx}, and the hierarchically sparse singleton intervals are computed exactly by Lemma~\ref{lem:sparse-correctness}. Summing over all of these intervals contributes $(3+O(\eps))\cost(\niceMatch|_{\nontrivial})$ cost to $\costE(\niceMatch)$. We also have $\cost(\niceMatch|_{\nontrivial}) \leq (1+O(\eps))\OPT_{\nontrivial}$ by Lemma~\ref{lem:structured-matching} since $\guess \approx \OPT$. Thus we contribute $(3+O(\eps))\OPT_{\nontrivial}$ cost over the nontrivial matches.
+
+     For the trivial matches, recall that we have $\cost(\niceMatch|_{\trivial}) \leq 2\OPT_{\trivial}$. The dense intervals charge the exact trivial cost, and the trivial sparse intervals charge at most $1.1$ times their total cost. Thus we admit at most $1.1\cost(\niceMatch|_{\trivial}) \leq 2.2\OPT_{\trivial}$ cost total.
+
+    Across all matches, we have $\costE(\niceMatch) \leq (3+O(\eps))\OPT_{\nontrivial} + 2.2\OPT_{\trivial} \leq (3+O(\eps))\OPT$ as desired. Note that our chunked DP can only return a cost less than this.
+\end{proof}
